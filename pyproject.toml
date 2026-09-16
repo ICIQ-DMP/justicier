@@ -3,7 +3,7 @@ name = "justicier"
 dynamic = ["version"]
 description = "Automated salary justifications"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 authors = [{name="AleixMT"}]
 license = {text="GPL-3.0-or-later"}
 dependencies = [
@@ -55,10 +55,11 @@ minor_tags = ["feat"]
 patch_tags = ["fix", "perf"]
 
 [tool.black]
-target-version = ["py311"]
+target-version = ["py314"]
 
 [tool.ruff]
 line-length = 120
+extend-exclude = ["docs"]
 
 [tool.ruff.lint]
 select = ["E", "F", "D", "N"]
@@ -71,5 +72,5 @@ addopts = "-q"
 testpaths = ["tests"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.14"
 strict = true

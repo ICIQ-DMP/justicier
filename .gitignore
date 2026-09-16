@@ -183,3 +183,5 @@ jenkins_home
 jenkins_agent_keys
 secrets_justicier.zip
 service/onedrive/data
+service/onedrive_conf/*
+!service/onedrive_conf/config.template

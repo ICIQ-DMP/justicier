@@ -14,11 +14,15 @@ SHELL := bash
 
 # ---- config ---------------------------------------------------------------
 
-# Check if python3.11 exists, otherwise default to python
-ifneq ($(shell command -v python3.11 2> /dev/null),)
-    PYTHON_BIN ?= python3.11
+# Check if python3.14 exists, otherwise default to python
+ifneq ($(shell command -v python3.14 2> /dev/null),)
+    PYTHON_BIN ?= python3.14
 else
-    PYTHON_BIN ?= python
+	ifneq ($(shell command -v python3 2> /dev/null),)
+    	PYTHON_BIN ?= python3
+    else
+    	PYTHON_BIN ?= python
+    endif
 endif
 
 VENV_DIR     ?= venv
@@ -28,9 +32,9 @@ DOCKER_IMAGE := AleixMT/justicier
 # When CONTAINER=1 (set via ENV in Dockerfile) use system-wide tools;
 # otherwise use the project venv. All targets below work in both contexts.
 ifdef CONTAINER
+    VENV_BIN      := /usr/local/bin
     PYTHON        := python
     PIP           := pip
-    VENV_BIN      := /usr/local/bin
     DEV_STAMP     := /tmp/.$(PKG_NAME)-dev-installed
     INSTALL_FLAGS :=
 else
@@ -84,7 +88,10 @@ install: $(VENV_BIN)/justicier  ## Install package
 
 hooks: .git/hooks/pre-commit .git/hooks/commit-msg .git/hooks/pre-push  ## Install git hooks
 
-dev: $(DEV_STAMP) hooks  ## Install dev dependencies and git hooks
+docs:  ## Init/update the docs submodule (justicier-docs)
+	@git submodule update --init --recursive docs
+
+dev: $(DEV_STAMP) hooks docs  ## Install dev dependencies, git hooks and docs submodule
 
 
 # ---- quality --------------------------------------------------------------
@@ -147,7 +154,7 @@ clean:  ## Remove build/test artifacts
 
 # ---- meta -----------------------------------------------------------------
 
-.PHONY: venv install dev hooks lint fmt test run clean help dist docker-build docker-build-dev docker-push docker-shell docker-run
+.PHONY: venv install dev hooks docs lint fmt test run clean help dist docker-build docker-build-dev docker-push docker-shell docker-run
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .+$$' $(MAKEFILE_LIST) | \

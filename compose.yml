@@ -1,10 +1,10 @@
 services:
-  justicier:
+  app:
     build:
       context: .
       dockerfile: Dockerfile
     depends_on:
-      onedrive_justicier:
+      onedrive:
         condition: service_healthy
     volumes:
       - ./service/data:/service/data
@@ -21,16 +21,16 @@ services:
       timeout: 5s
       retries: 3
 
-  onedrive_justicier:
+  onedrive:
     image: docker.io/driveone/onedrive:edge
     container_name: onedrive_justicier
     userns_mode: keep-id
     volumes:
-      - ./service/conf:/onedrive/conf
-      - ./service/data:/onedrive/data
-      - ./service/logs:/onedrive/logs
+      - ./service/onedrive/conf:/onedrive/conf
+      - ./service/onedrive/data:/onedrive/data
+      - ./service/onedrive/logs:/onedrive/logs
     networks:
-      - justicier_net
+      - jenkins_net
     healthcheck:
       test: sh -c '[ -s /onedrive/conf/items.sqlite3-wal ]'
       interval: 60s

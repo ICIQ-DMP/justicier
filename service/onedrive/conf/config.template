@@ -12,7 +12,6 @@ cleanup_local_files = "true"
 bypass_data_preservation = "true"
 
 # Uncomment me to perform resync with docker compose run -it onedrive
-resync = "true"
-
-resync_auth = "true"
+#resync = "true"
+#resync_auth = "true"
 

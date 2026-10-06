@@ -31,15 +31,17 @@ services:
       - ./service/onedrive/data:/onedrive/data
       - ./service/onedrive/logs:/onedrive/logs
       - ./service/onedrive/entrypoint-wrapper.sh:/entrypoint-wrapper.sh:ro
+      - ./service/onedrive/healthcheck.sh:/healthcheck.sh:ro
     secrets:
       - DRIVE_ID
     networks:
       - jenkins_net
     healthcheck:
-      test: sh -c '[ -s /onedrive/conf/items.sqlite3-wal ]'
-      interval: 60s
+      test: ["CMD", "bash", "/healthcheck.sh"]
+      interval: 10s
       timeout: 5s
-      retries: 2
+      retries: 3
+      start_period: 10s
 
 secrets:
   VAULT_ADDR:

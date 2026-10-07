@@ -25,10 +25,10 @@ from . import logger
 from .custom_except import InvalidFilenameError
 from .defines import (
     BankType,
-    SalaryType,
     LaCaixaFolderSuffixes,
     BBVAFolderSuffixes,
     DATETIME_FORMAT_MONTH_YEAR,
+    ProofType,
 )
 from .naf import NAF
 from .name import Name
@@ -183,7 +183,9 @@ def _parse_proof_type(
         ) from e
 
 
-def parse_proof_folder_name(folder_name: str) -> tuple[datetime, BankType, SalaryType]:
+def parse_proof_folder_name(
+    folder_name: str,
+) -> tuple[datetime, BankType, ProofType]:
     """Parse date, bank type, and salary type from a bank-proof folder name.
 
     The regex is built dynamically from the BankType, BBVAFolderSuffixes, and
@@ -247,16 +249,16 @@ def parse_proof_type_from_bbva_folder_name(folder_name: str) -> BBVAFolderSuffix
 
 def map_folder_suffix_to_salary_type(
     suffix: BBVAFolderSuffixes | LaCaixaFolderSuffixes,
-) -> SalaryType:
+) -> ProofType:
     """Maps a bank folder suffix into the types of salaries that are in the folder."""
     if suffix == BBVAFolderSuffixes.REGULAR or suffix == LaCaixaFolderSuffixes.REGULAR:
-        return SalaryType.REGULAR
+        return ProofType.REGULAR
     elif suffix == BBVAFolderSuffixes.DELAY or suffix == LaCaixaFolderSuffixes.DELAY:
-        return SalaryType.DELAY
+        return ProofType.DELAY
     elif suffix == BBVAFolderSuffixes.EXTRA or suffix == LaCaixaFolderSuffixes.EXTRA:
-        return SalaryType.EXTRA
+        return ProofType.EXTRA
     elif suffix == BBVAFolderSuffixes.SETTLEMENT:
-        return SalaryType.SETTLEMENT
+        return ProofType.ADVANCED_SETTLEMENT
     else:
         raise ValueError(
             f"{suffix} is not a valid BBVAFolderSuffixes or LaCaixaFolderSuffixes"

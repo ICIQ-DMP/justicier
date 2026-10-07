@@ -48,7 +48,7 @@ from .data import (
 from .defines import (
     SHAREPOINT_RLCS_OUTPUT_FOLDER_NAME,
     SHAREPOINT_SALARIES_OUTPUT_FOLDER_NAME,
-    SalaryType,
+    SalaryFileSuffix,
     RegularSalaryType,
     RLCTypeFileName,
     SHAREPOINT_CONTRACTS_OUTPUT_FOLDER_NAME,
@@ -56,6 +56,7 @@ from .defines import (
     RLCSubType,
     RLCType,
     BankType,
+    ProofType,
 )
 
 from .filesystem import flatten_dirs, list_dir
@@ -300,7 +301,7 @@ def process_salaries_with_rlc(
             f"{unparse_year_month(salary_date)}_{salary_type.value}"
         )
         # Liquidation files
-        if salary_type == SalaryType.LIQ:
+        if salary_type == SalaryFileSuffix.LIQUIDATION:
             salary_file_liq_naf = salary_file_path.stem.split("_")[2]
             if salary_file_liq_naf != str(naf):
                 log.trace(
@@ -345,7 +346,7 @@ def process_salaries_with_rlc(
                 f"further processing it."
             )
 
-            if salary_type == SalaryType.DELAY:
+            if salary_type == SalaryFileSuffix.DELAY:
                 delay_salaries_rlcs_found[salary_date][0] = True
                 process_rlc_l03(
                     salary_file_path,
@@ -356,7 +357,7 @@ def process_salaries_with_rlc(
                     rlc_folder_path,
                     delay_salaries_rlcs_found,
                 )
-            elif salary_type == SalaryType.REGULAR:
+            elif salary_type == SalaryFileSuffix.REGULAR:
                 log.info(
                     f"Salary file {salary_file_path} page {salary_page_number + 1} has been selected "
                     f"as regular salary for date {unparse_date(salary_date)}"
@@ -402,13 +403,13 @@ def process_salaries_with_rlc(
                     )
                     continue
 
-            elif salary_type == SalaryType.EXTRA:
+            elif salary_type == SalaryFileSuffix.EXTRA:
                 log.info(
                     f"Salary file {salary_file_path} page {salary_page_number + 1} has been selected "
                     f"as extra salary for date {unparse_date(salary_date)}"
                 )
                 continue
-            elif salary_type == SalaryType.LIQ:
+            elif salary_type == SalaryFileSuffix.LIQUIDATION:
                 continue
             else:
                 log.error(
@@ -453,7 +454,7 @@ def process_proof(
     nifs: list[NIF],
     proof_date: datetime,
     bank: BankType,
-    proof_type: SalaryType,
+    proof_type: ProofType,
 ) -> None:
     """Processes a specific proof directory, that contain proof documents."""
     files = list_dir(proof_folder)
@@ -521,7 +522,7 @@ def process_proofs(
             )
             continue
 
-        if proof_type is SalaryType.SETTLEMENT:
+        if proof_type is ProofType.ADVANCED_SETTLEMENT:
             # Only select a payment that is settlement if the flag is active
             if look_for_liquidation_payments:
                 # When selecting, select the range plus two months offset, one from the beginning one from the end

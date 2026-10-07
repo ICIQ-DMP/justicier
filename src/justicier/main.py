@@ -333,7 +333,6 @@ def process(args: argparse.Namespace, input_folder: Path) -> tuple[str, str]:
         end=args.end,
     )
     log.info(report_text)
-    exit(0)
 
     if args.request:
         end_time = elapsed_time(start_time)

@@ -241,6 +241,13 @@ def process_rlc_l03(
         suffix += 1
 
 
+def compute_output_filename_base(
+    salary_date: datetime, the_type: SalaryType | SalaryFileSuffix
+) -> str:
+    """Computes part of the output filename based on the date and on a given salary type."""
+    return f"{unparse_year_month(salary_date)}_{the_type.value}"
+
+
 def process_salaries_with_rlc(
     salaries_folder_path: Path,
     rlc_folder_path: Path,
@@ -298,6 +305,27 @@ def process_salaries_with_rlc(
             log.error(f"Salary file {salary_file} has an invalid name, skipping: {e}")
             continue
 
+        # Liquidation files
+        if salary_file_suffix == SalaryFileSuffix.LIQUIDATION:
+
+            salary_file_liq_naf = salary_file_path.stem.split("_")[2]
+            if salary_file_liq_naf != str(naf):
+                log.trace(
+                    f"NAF {str(naf)} was not detected in the name of liquidation PDF {salary_file}. Skipping "
+                    f"document."
+                )
+                continue
+            shutil.copy(
+                src=salary_file_path,
+                dst=naf_dir
+                / SHAREPOINT_SALARIES_OUTPUT_FOLDER_NAME
+                / (
+                    compute_output_filename_base(salary_date, salary_file_suffix)
+                    + ".pdf"
+                ),
+            )
+            scanned_liquidation_salary_found = True
+
         salary_pages = get_matching_pages(salary_file_path, naf.slash_dash_str())
         if len(salary_pages) == 0:
             log.debug(
@@ -313,27 +341,9 @@ def process_salaries_with_rlc(
                 )
                 continue
 
-            salary_output_filename_base = (
-                f"{unparse_year_month(salary_date)}_{salary_file_type.value}"
+            salary_output_filename_base = compute_output_filename_base(
+                salary_date, salary_file_type
             )
-
-            # Liquidation files
-            if salary_file_suffix == SalaryFileSuffix.LIQUIDATION:
-                salary_file_liq_naf = salary_file_path.stem.split("_")[2]
-                if salary_file_liq_naf != str(naf):
-                    log.trace(
-                        f"NAF {str(naf)} was not detected in the name of liquidation PDF {salary_file}. Skipping "
-                        f"document."
-                    )
-                    continue
-                shutil.copy(
-                    src=salary_file_path,
-                    dst=naf_dir
-                    / SHAREPOINT_SALARIES_OUTPUT_FOLDER_NAME
-                    / (salary_output_filename_base + ".pdf"),
-                )
-                scanned_liquidation_salary_found = True
-
             salary_output_path = (
                 naf_dir
                 / SHAREPOINT_SALARIES_OUTPUT_FOLDER_NAME

@@ -16,6 +16,7 @@
 
 """Result-structure factories."""
 
+import copy
 import re
 from datetime import datetime
 from typing import Dict, List, Any, TypeVar, Type, Union
@@ -85,7 +86,7 @@ def get_monthly_result_structure(
     result = {}
     while current <= end:
         log.trace(f"Current datetime is: {current}")
-        result[current] = (
+        result[current] = copy.deepcopy(
             result_structure  # Monthly salary found, RLC L00N found, RLC L00P found
         )
         # Move to next month

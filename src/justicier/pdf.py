@@ -26,9 +26,9 @@ from typing import List, Tuple
 import pypdf
 from pypdf import PdfReader, PdfWriter
 
-from .custom_except import UndefinedRegularSalaryTypeError
+from .custom_except import UndefinedSalaryTypeError
 from .dates import unparse_month
-from .defines import RegularSalaryType
+from .defines import SalaryFileSuffix, SalaryType
 from .filesystem import list_dir
 from .logger import get_logger
 
@@ -252,11 +252,14 @@ def is_settlement_salary(salary_page: pypdf.PageObject) -> bool:
     return False
 
 
-def parse_regular_salary_type(salary_page: pypdf.PageObject) -> RegularSalaryType:
+def parse_salary_type(
+    salary_page: pypdf.PageObject, salary_file_suffix: SalaryFileSuffix
+) -> SalaryType:
     """Classify a regular salary page as monthly or settlement.
 
     Args:
         salary_page: PDF page to classify.
+        salary_file_suffix: A salary file suffix computed from the filename where the file is.
 
     Returns:
         The detected RegularSalaryType.
@@ -264,12 +267,21 @@ def parse_regular_salary_type(salary_page: pypdf.PageObject) -> RegularSalaryTyp
     Raises:
         UndefinedRegularSalaryTypeError: If the page does not match either known subtype.
     """
-    if is_monthly_salary(salary_page):
-        return RegularSalaryType.MONTHLY
-    elif is_settlement_salary(salary_page):
-        return RegularSalaryType.SETTLEMENT
+    if salary_file_suffix == SalaryFileSuffix.REGULAR:
+        if is_monthly_salary(salary_page):
+            return SalaryType.MONTHLY
+        elif is_settlement_salary(salary_page):
+            return SalaryType.SETTLEMENT
+        else:
+            raise UndefinedSalaryTypeError("The type was not recognized")
+    elif salary_file_suffix == SalaryFileSuffix.DELAY:
+        return SalaryType.DELAY
+    elif salary_file_suffix == SalaryFileSuffix.LIQUIDATION:
+        return SalaryType.LIQUIDATION
+    elif salary_file_suffix == SalaryFileSuffix.EXTRA:
+        return SalaryType.EXTRA
     else:
-        raise UndefinedRegularSalaryTypeError("The type was not recognized")
+        raise UndefinedSalaryTypeError("The type was not recognized")
 
 
 def merge_pdfs(

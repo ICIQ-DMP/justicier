@@ -108,7 +108,7 @@ def parse_salary_date(path: Path) -> datetime:
         ) from e
 
 
-def parse_salary_type(path: Path) -> SalaryFileSuffix:
+def parse_salary_file_suffix(path: Path) -> SalaryFileSuffix:
     """Extract the SalaryType from a salary filename.
 
     Expected format: ``YYMM_Type_*.pdf``

@@ -34,7 +34,7 @@ class ArgumentNafInvalidError(Exception):
     """Raised when a NAF or NIF string does not conform to the expected format."""
 
 
-class UndefinedRegularSalaryTypeError(Exception):
+class UndefinedSalaryTypeError(Exception):
     """Raised when a salary page cannot be classified as monthly or settlement."""
 
 

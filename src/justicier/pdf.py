@@ -26,9 +26,16 @@ from typing import List, Tuple
 import pypdf
 from pypdf import PdfReader, PdfWriter
 
-from .custom_except import UndefinedSalaryTypeError
+from .custom_except import UndefinedSalaryTypeError, UndefinedProofTypeError
+from .data import parse_salary_type_from_file_suffix, map_folder_suffix_to_proof_type
 from .dates import unparse_month
-from .defines import SalaryFileSuffix, SalaryType
+from .defines import (
+    ProofFileSuffix,
+    SalaryType,
+    ProofType,
+    BBVAFolderSuffixes,
+    LaCaixaFolderSuffixes,
+)
 from .filesystem import list_dir
 from .logger import get_logger
 
@@ -253,7 +260,7 @@ def is_settlement_salary(salary_page: pypdf.PageObject) -> bool:
 
 
 def parse_salary_type(
-    salary_page: pypdf.PageObject, salary_file_suffix: SalaryFileSuffix
+    salary_page: pypdf.PageObject, salary_file_suffix: ProofFileSuffix
 ) -> SalaryType:
     """Classify a regular salary page as monthly or settlement.
 
@@ -267,21 +274,53 @@ def parse_salary_type(
     Raises:
         UndefinedRegularSalaryTypeError: If the page does not match either known subtype.
     """
-    if salary_file_suffix == SalaryFileSuffix.REGULAR:
+    if salary_file_suffix == ProofFileSuffix.REGULAR:
         if is_monthly_salary(salary_page):
             return SalaryType.MONTHLY
         elif is_settlement_salary(salary_page):
             return SalaryType.SETTLEMENT
         else:
             raise UndefinedSalaryTypeError("The type was not recognized")
-    elif salary_file_suffix == SalaryFileSuffix.DELAY:
-        return SalaryType.DELAY
-    elif salary_file_suffix == SalaryFileSuffix.LIQUIDATION:
-        return SalaryType.LIQUIDATION
-    elif salary_file_suffix == SalaryFileSuffix.EXTRA:
-        return SalaryType.EXTRA
-    else:
-        raise UndefinedSalaryTypeError("The type was not recognized")
+    return parse_salary_type_from_file_suffix(salary_file_suffix)
+
+
+def is_monthly_proof(proof_page: pypdf.PageObject) -> bool:
+    """Return True if the page contains the monthly proof marker text."""
+    return False
+
+
+def is_settlement_proof(proof_page: pypdf.PageObject) -> bool:
+    """Return True if the page contains the settlement proof marker text."""
+    return False
+
+
+def parse_proof_type(
+    proof_page: pypdf.PageObject,
+    proof_file_suffix: BBVAFolderSuffixes | LaCaixaFolderSuffixes,
+) -> ProofType:
+    """Classify a proof page with its type.
+
+    Args:
+        proof_page: PDF page to classify.
+        proof_file_suffix: A proof file suffix computed from the filename where the file is.
+
+    Returns:
+        The detected ProofType.
+
+    Raises:
+        UndefinedProofTypeError: If the page does not match either known subtype.
+    """
+    if (
+        proof_file_suffix == BBVAFolderSuffixes.REGULAR
+        or proof_file_suffix == LaCaixaFolderSuffixes.REGULAR
+    ):
+        if is_monthly_proof(proof_page):
+            return ProofType.MONTHLY
+        elif is_settlement_proof(proof_page):
+            return ProofType.SETTLEMENT
+        else:
+            raise UndefinedProofTypeError("The type was not recognized")
+    return map_folder_suffix_to_proof_type(proof_file_suffix)
 
 
 def merge_pdfs(

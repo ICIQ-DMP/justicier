@@ -35,7 +35,11 @@ class ArgumentNafInvalidError(Exception):
 
 
 class UndefinedSalaryTypeError(Exception):
-    """Raised when a salary page cannot be classified as monthly or settlement."""
+    """Raised when a salary page cannot be classified."""
+
+
+class UndefinedProofTypeError(Exception):
+    """Raised when a proof page cannot be classified."""
 
 
 class UndefinedInputTypeError(Exception):

@@ -224,7 +224,7 @@ class RLCSubType(Enum):
     PAYMENT = "P"
 
 
-class SalaryFileSuffix(Enum):
+class ProofFileSuffix(Enum):
     """Salary file and bank proof types as encoded in their filenames."""
 
     REGULAR = "Nomines"
@@ -249,7 +249,9 @@ class SalaryType(Enum):
 class ProofType(Enum):
     """Salary file and bank proof types as encoded in their filenames."""
 
-    REGULAR = "REGULAR"
+    MONTHLY = "MONTHLY"
+    SETTLEMENT = "SETTLEMENT"
+
     DELAY = "DELAY"
     EXTRA = "EXTRA"
     ADVANCED_SETTLEMENT = "ADVANCED_SETTLEMENT"

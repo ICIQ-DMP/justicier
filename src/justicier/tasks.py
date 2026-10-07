@@ -37,7 +37,6 @@ from .dates import (
 from .nif import NIF
 from .naf import NAF
 from .custom_except import (
-    UndefinedSalaryTypeError,
     InvalidFilenameError,
 )
 from .data import (
@@ -48,7 +47,7 @@ from .data import (
 from .defines import (
     SHAREPOINT_RLCS_OUTPUT_FOLDER_NAME,
     SHAREPOINT_SALARIES_OUTPUT_FOLDER_NAME,
-    SalaryFileSuffix,
+    ProofFileSuffix,
     RLCTypeFileName,
     SHAREPOINT_CONTRACTS_OUTPUT_FOLDER_NAME,
     SHAREPOINT_RNTS_OUTPUT_FOLDER_NAME,
@@ -297,24 +296,6 @@ def process_salaries_with_rlc(
         except InvalidFilenameError as e:
             log.error(f"Salary file {salary_file} has an invalid name, skipping: {e}")
             continue
-        salary_output_filename_base = (
-            f"{unparse_year_month(salary_date)}_{salary_file_suffix.value}"
-        )
-        # Liquidation files
-        if salary_file_suffix == SalaryFileSuffix.LIQUIDATION:
-            salary_file_liq_naf = salary_file_path.stem.split("_")[2]
-            if salary_file_liq_naf != str(naf):
-                log.trace(
-                    f"NAF {str(naf)} was not detected in the name of liquidation PDF {salary_file}. Skipping document."
-                )
-                continue
-            shutil.copy(
-                src=salary_file_path,
-                dst=naf_dir
-                / SHAREPOINT_SALARIES_OUTPUT_FOLDER_NAME
-                / (salary_output_filename_base + ".pdf"),
-            )
-            scanned_liquidation_salary_found = True
 
         salary_pages = get_matching_pages(salary_file_path, naf.slash_dash_str())
         if len(salary_pages) == 0:
@@ -323,6 +304,35 @@ def process_salaries_with_rlc(
             )
             continue
         for salary_page, salary_page_number in salary_pages:
+            try:
+                salary_file_type = parse_salary_type(salary_page, salary_file_suffix)
+            except InvalidFilenameError as e:
+                log.error(
+                    f"Salary file {salary_file} has an invalid name, skipping: {e}"
+                )
+                continue
+
+            salary_output_filename_base = (
+                f"{unparse_year_month(salary_date)}_{salary_file_type.value}"
+            )
+
+            # Liquidation files
+            if salary_file_suffix == ProofFileSuffix.LIQUIDATION:
+                salary_file_liq_naf = salary_file_path.stem.split("_")[2]
+                if salary_file_liq_naf != str(naf):
+                    log.trace(
+                        f"NAF {str(naf)} was not detected in the name of liquidation PDF {salary_file}. Skipping "
+                        f"document."
+                    )
+                    continue
+                shutil.copy(
+                    src=salary_file_path,
+                    dst=naf_dir
+                    / SHAREPOINT_SALARIES_OUTPUT_FOLDER_NAME
+                    / (salary_output_filename_base + ".pdf"),
+                )
+                scanned_liquidation_salary_found = True
+
             salary_output_path = (
                 naf_dir
                 / SHAREPOINT_SALARIES_OUTPUT_FOLDER_NAME
@@ -334,7 +344,7 @@ def process_salaries_with_rlc(
                 salary_output_path = (
                     naf_dir
                     / SHAREPOINT_SALARIES_OUTPUT_FOLDER_NAME
-                    / f"{unparse_year_month(salary_date)}_{salary_file_suffix.value}_{index}.pdf"
+                    / f"{unparse_year_month(salary_date)}_{salary_file_type.value}_{index}.pdf"
                 )
                 index += 1
 
@@ -346,7 +356,7 @@ def process_salaries_with_rlc(
                 f"further processing it."
             )
 
-            if salary_file_suffix == SalaryFileSuffix.DELAY:
+            if salary_file_type == SalaryType.DELAY:
                 delay_salaries_rlcs_found[salary_date][0] = True
                 process_rlc_l03(
                     salary_file_path,
@@ -357,65 +367,43 @@ def process_salaries_with_rlc(
                     rlc_folder_path,
                     delay_salaries_rlcs_found,
                 )
-            elif salary_file_suffix == SalaryFileSuffix.REGULAR:
+            elif salary_file_type == SalaryType.MONTHLY:
                 log.info(
-                    f"Salary file {salary_file_path} page {salary_page_number + 1} has been selected "
-                    f"as regular salary for date {unparse_date(salary_date)}"
+                    f"Salary file {salary_file_path} page {salary_page_number + 1} has been "
+                    f"selected as regular monthly salary for date {unparse_date(salary_date)}"
                 )
-                try:
-                    regular_salary_type = parse_salary_type(
-                        salary_page, salary_file_suffix
-                    )
-                except UndefinedSalaryTypeError as e:
-                    log.error(
-                        f"Salary file {salary_file_path} page {salary_page_number + 1} is a type "
-                        f"not supported or can not be recognized. Skipping to next page. Internal error "
-                        f"is: {str(e)}"
-                    )
-                    continue
-                if regular_salary_type == SalaryType.MONTHLY:
-                    log.info(
-                        f"Salary file {salary_file_path} page {salary_page_number + 1} has been "
-                        f"selected as regular monthly salary for date {unparse_date(salary_date)}"
-                    )
-                    process_generic_rlc(
-                        RLCType.REGULAR,
-                        salary_date,
-                        salary_file_path,
-                        rlc_folder_path,
-                        naf_dir,
-                        regular_monthly_salaries_rlcs_found,
-                    )
-                elif regular_salary_type == SalaryType.SETTLEMENT:
-                    log.info(
-                        f"Salary file {salary_file_path} page {salary_page_number + 1} has been "
-                        f"selected as regular settlement salary for date {unparse_date(salary_date)}"
-                    )
-                    process_generic_rlc(
-                        RLCType.SETTLEMENT,
-                        salary_date,
-                        salary_file_path,
-                        rlc_folder_path,
-                        naf_dir,
-                        regular_settlement_salaries_rlcs_found,
-                    )
-                else:
-                    log.error(
-                        "The regular salary type is not recognized. This RLC will be skipped."
-                    )
-                    continue
-
-            elif salary_file_suffix == SalaryFileSuffix.EXTRA:
+                process_generic_rlc(
+                    RLCType.REGULAR,
+                    salary_date,
+                    salary_file_path,
+                    rlc_folder_path,
+                    naf_dir,
+                    regular_monthly_salaries_rlcs_found,
+                )
+            elif salary_file_type == SalaryType.SETTLEMENT:
+                log.info(
+                    f"Salary file {salary_file_path} page {salary_page_number + 1} has been "
+                    f"selected as regular settlement salary for date {unparse_date(salary_date)}"
+                )
+                process_generic_rlc(
+                    RLCType.SETTLEMENT,
+                    salary_date,
+                    salary_file_path,
+                    rlc_folder_path,
+                    naf_dir,
+                    regular_settlement_salaries_rlcs_found,
+                )
+            elif salary_file_type == SalaryType.EXTRA:
                 log.info(
                     f"Salary file {salary_file_path} page {salary_page_number + 1} has been selected "
                     f"as extra salary for date {unparse_date(salary_date)}"
                 )
                 continue
-            elif salary_file_suffix == SalaryFileSuffix.LIQUIDATION:
+            elif salary_file_type == SalaryType.LIQUIDATION:
                 continue
             else:
                 log.error(
-                    f"Detected type {str(salary_file_suffix)} that is not a recognized type. The current salary "
+                    f"Detected type {str(salary_file_type)} that is not a recognized type. The current salary "
                     f"file will be ignored"
                 )
 

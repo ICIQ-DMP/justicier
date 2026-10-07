@@ -268,7 +268,6 @@ def process_salaries_with_rlc(
     delay_salaries_rlcs_found = get_rlc_monthly_result_structure(begin, end)
 
     salary_files = flatten_dirs(salaries_folder_path)
-    salary_files.sort()  # Improve readability
     salary_files_selected = []
     for salary_file in salary_files:
         try:

@@ -406,6 +406,7 @@ def main() -> None:
         result_link, log_link = process(args, input_folder)
     except ValueError as e:
         err = f"A not controlled error happen during execution of Justicier. Error is: {str(e)}"
+        log.error(err)
         if args.request:
             update_list_item_field(
                 args.request, {SharepointListFields.ERROR_MESSAGE.value: err}
@@ -438,7 +439,6 @@ def main() -> None:
                     str(SHAREPOINT_ADMIN_LOGS_FOLDER_PATH) + supervisor_log_path.name,
                     supervisor_log_path,
                 )
-        log.error(err)
         exit(1)
 
     log.info("Justification process is finished.")

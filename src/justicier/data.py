@@ -22,15 +22,20 @@ from datetime import datetime
 from typing import Dict, List, Any, TypeVar, Type, Union
 
 from . import logger
-from .custom_except import InvalidFilenameError, UndefinedSalaryTypeError
+from .custom_except import (
+    InvalidFilenameError,
+    UndefinedSalaryTypeError,
+    UndefinedProofTypeError,
+)
 from .defines import (
     BankType,
     LaCaixaFolderSuffixes,
     BBVAFolderSuffixes,
     DATETIME_FORMAT_MONTH_YEAR,
     ProofType,
-    ProofFileSuffix,
+    ProofFolderType,
     SalaryType,
+    SalaryFileSuffix,
 )
 from .naf import NAF
 from .name import Name
@@ -70,7 +75,7 @@ def get_rnt_monthly_result_structure(
 
 
 def parse_salary_type_from_file_suffix(
-    salary_file_suffix: ProofFileSuffix,
+    salary_file_suffix: SalaryFileSuffix,
 ) -> SalaryType:
     """Classify a regular salary page as monthly or settlement.
 
@@ -84,13 +89,13 @@ def parse_salary_type_from_file_suffix(
     Raises:
         UndefinedRegularSalaryTypeError: If the page does not match either known subtype.
     """
-    if salary_file_suffix == ProofFileSuffix.DELAY:
+    if salary_file_suffix == SalaryFileSuffix.DELAY:
         return SalaryType.DELAY
-    elif salary_file_suffix == ProofFileSuffix.LIQUIDATION:
+    elif salary_file_suffix == SalaryFileSuffix.LIQUIDATION:
         return SalaryType.LIQUIDATION
-    elif salary_file_suffix == ProofFileSuffix.EXTRA:
+    elif salary_file_suffix == SalaryFileSuffix.EXTRA:
         return SalaryType.EXTRA
-    elif salary_file_suffix == ProofFileSuffix.REGULAR:
+    elif salary_file_suffix == SalaryFileSuffix.REGULAR:
         raise UndefinedSalaryTypeError(
             "the SalaryType cannot be deduced only from SalaryFileSuffix.REGULAR"
         )
@@ -216,7 +221,7 @@ def _parse_proof_type(
 
 def parse_proof_folder_name(
     folder_name: str,
-) -> tuple[datetime, BankType, ProofType]:
+) -> tuple[datetime, BankType, ProofFolderType]:
     """Parse date, bank type, and salary type from a bank-proof folder name.
 
     The regex is built dynamically from the BankType, BBVAFolderSuffixes, and
@@ -263,7 +268,7 @@ def parse_proof_folder_name(
     suffix_cls = bank_type_to_suffix_cls[bank_type]
     suffix = suffix_cls(suffix_str if suffix_str is not None else "")
 
-    return date, bank_type, map_folder_suffix_to_proof_type(suffix)
+    return date, bank_type, map_folder_suffix_to_proof_folder_type(suffix)
 
 
 def parse_proof_type_from_la_caixa_folder_name(
@@ -278,22 +283,44 @@ def parse_proof_type_from_bbva_folder_name(folder_name: str) -> BBVAFolderSuffix
     return _parse_proof_type(folder_name, BankType.BBVA, BBVAFolderSuffixes)
 
 
-def map_folder_suffix_to_proof_type(
+def map_folder_suffix_to_proof_folder_type(
     suffix: BBVAFolderSuffixes | LaCaixaFolderSuffixes,
+) -> ProofFolderType:
+    """Maps a bank-specific folder suffix into its canonical ProofFolderType.
+
+    Args:
+        suffix: A per-bank folder suffix (BBVAFolderSuffixes or LaCaixaFolderSuffixes).
+
+    Returns:
+        The ProofFolderType member sharing the same name as *suffix*.
+
+    Raises:
+        UndefinedProofTypeError: If *suffix* has no ProofFolderType counterpart.
+    """
+    try:
+        return ProofFolderType[suffix.name]
+    except KeyError as e:
+        raise UndefinedProofTypeError(
+            f"{suffix} does not map to any known ProofFolderType"
+        ) from e
+
+
+def map_folder_suffix_to_proof_type(
+    suffix: ProofFolderType,
 ) -> ProofType:
     """Maps a bank folder suffix into the types of salaries that are in the folder."""
-    if suffix == BBVAFolderSuffixes.DELAY or suffix == LaCaixaFolderSuffixes.DELAY:
+    if suffix == ProofFolderType.DELAY:
         return ProofType.DELAY
-    elif suffix == BBVAFolderSuffixes.EXTRA or suffix == LaCaixaFolderSuffixes.EXTRA:
+    elif suffix == ProofFolderType.EXTRA:
         return ProofType.EXTRA
-    elif suffix == BBVAFolderSuffixes.SETTLEMENT:
+    elif suffix == ProofFolderType.ADVANCED_SETTLEMENT:
         return ProofType.ADVANCED_SETTLEMENT
-    elif (
-        suffix == BBVAFolderSuffixes.REGULAR or suffix == LaCaixaFolderSuffixes.REGULAR
-    ):
-        raise ValueError(f"Type cannot be determined from folder suffix {suffix}")
+    elif suffix == ProofFolderType.REGULAR:
+        raise UndefinedProofTypeError(
+            f"Type cannot be determined from folder suffix {suffix}"
+        )
     else:
-        raise ValueError(
+        raise UndefinedProofTypeError(
             f"{suffix} is not a valid BBVAFolderSuffixes or LaCaixaFolderSuffixes"
         )
 

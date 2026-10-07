@@ -224,15 +224,22 @@ class RLCSubType(Enum):
     PAYMENT = "P"
 
 
-class ProofFileSuffix(Enum):
-    """Salary file and bank proof types as encoded in their filenames."""
+class ProofFolderType(Enum):
+    """Abstraction of the type of proofs inside a folder."""
+
+    REGULAR = "REGULAR"
+    DELAY = "DELAY"
+    EXTRA = "EXTRA"
+    ADVANCED_SETTLEMENT = "BESTRETA_QUITANÇA"
+
+
+class SalaryFileSuffix(Enum):
+    """Salary file types as encoded in their filenames."""
 
     REGULAR = "Nomines"
     DELAY = "Atrasos"
     EXTRA = "Extres"
     LIQUIDATION = "LIQ"
-
-    # SETTLEMENT = "BESTRETA_QUITANÇA"
 
 
 class SalaryType(Enum):
@@ -257,13 +264,6 @@ class ProofType(Enum):
     ADVANCED_SETTLEMENT = "ADVANCED_SETTLEMENT"
 
 
-class RegularSalaryType(Enum):
-    """Sub-types of regular salary slips."""
-
-    SETTLEMENT = "Settlement"
-    MONTHLY = "Monthly"
-
-
 class LaCaixaFolderSuffixes(Enum):
     """La Caixa bank proofs folder suffixes."""
 
@@ -278,4 +278,4 @@ class BBVAFolderSuffixes(Enum):
     REGULAR = ""
     DELAY = "endarreriments"
     EXTRA = "FINIQUITO"
-    SETTLEMENT = "BESTRETA_QUITANÇA"
+    ADVANCED_SETTLEMENT = "BESTRETA_QUITANÇA"

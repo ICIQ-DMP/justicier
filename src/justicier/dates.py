@@ -24,7 +24,7 @@ from .custom_except import InvalidFilenameError
 from .defines import (
     DATETIME_FORMAT_YEAR_MONTH,
     DATETIME_FORMAT_MONTH_YEAR,
-    ProofFileSuffix,
+    SalaryFileSuffix,
 )
 
 log = logger.get_logger(__name__)
@@ -108,7 +108,7 @@ def parse_salary_date(path: Path) -> datetime:
         ) from e
 
 
-def parse_salary_file_suffix(path: Path) -> ProofFileSuffix:
+def parse_salary_file_suffix(path: Path) -> SalaryFileSuffix:
     """Extract the SalaryType from a salary filename.
 
     Expected format: ``YYMM_Type_*.pdf``
@@ -131,7 +131,7 @@ def parse_salary_file_suffix(path: Path) -> ProofFileSuffix:
             f"Cannot parse type from salary filename '{name}': expected YYMM_Type format"
         ) from e
     try:
-        return ProofFileSuffix(type_str)
+        return SalaryFileSuffix(type_str)
     except ValueError as e:
         raise InvalidFilenameError(
             f"Unknown salary type '{type_str}' in '{name}'"

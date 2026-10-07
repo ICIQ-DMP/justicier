@@ -30,11 +30,10 @@ from .custom_except import UndefinedSalaryTypeError, UndefinedProofTypeError
 from .data import parse_salary_type_from_file_suffix, map_folder_suffix_to_proof_type
 from .dates import unparse_month
 from .defines import (
-    ProofFileSuffix,
+    ProofFolderType,
     SalaryType,
     ProofType,
-    BBVAFolderSuffixes,
-    LaCaixaFolderSuffixes,
+    SalaryFileSuffix,
 )
 from .filesystem import list_dir
 from .logger import get_logger
@@ -260,7 +259,7 @@ def is_settlement_salary(salary_page: pypdf.PageObject) -> bool:
 
 
 def parse_salary_type(
-    salary_page: pypdf.PageObject, salary_file_suffix: ProofFileSuffix
+    salary_page: pypdf.PageObject, salary_file_suffix: SalaryFileSuffix
 ) -> SalaryType:
     """Classify a regular salary page as monthly or settlement.
 
@@ -274,7 +273,7 @@ def parse_salary_type(
     Raises:
         UndefinedRegularSalaryTypeError: If the page does not match either known subtype.
     """
-    if salary_file_suffix == ProofFileSuffix.REGULAR:
+    if salary_file_suffix == SalaryFileSuffix.REGULAR:
         if is_monthly_salary(salary_page):
             return SalaryType.MONTHLY
         elif is_settlement_salary(salary_page):
@@ -285,18 +284,52 @@ def parse_salary_type(
 
 
 def is_monthly_proof(proof_page: pypdf.PageObject) -> bool:
-    """Return True if the page contains the monthly proof marker text."""
+    """Return True if the page contains the monthly proof marker text.
+
+    Args:
+        proof_page: PDF page to inspect.
+
+    Returns:
+        True if ``"ABONO NOMINA"`` is found in the extracted text.
+    """
+    text = proof_page.extract_text()
+    if not text:
+        return False
+
+    pattern_str = r"ABONO NOMINA"
+    pattern = re.compile(pattern_str)
+
+    match = pattern.findall(text)
+    if match:
+        return True
     return False
 
 
 def is_settlement_proof(proof_page: pypdf.PageObject) -> bool:
-    """Return True if the page contains the settlement proof marker text."""
+    """Return True if the page contains the settlement proof marker text.
+
+    Args:
+        proof_page: PDF page to inspect.
+
+    Returns:
+        True if ``"ABONO FINIQUITO"`` is found in the extracted text.
+    """
+    text = proof_page.extract_text()
+    if not text:
+        return False
+
+    pattern_str = r"ABONO FINIQUITO"
+    pattern = re.compile(pattern_str)
+
+    match = pattern.findall(text)
+    if match:
+        return True
     return False
 
 
 def parse_proof_type(
     proof_page: pypdf.PageObject,
-    proof_file_suffix: BBVAFolderSuffixes | LaCaixaFolderSuffixes,
+    proof_file_suffix: ProofFolderType,
 ) -> ProofType:
     """Classify a proof page with its type.
 
@@ -310,10 +343,7 @@ def parse_proof_type(
     Raises:
         UndefinedProofTypeError: If the page does not match either known subtype.
     """
-    if (
-        proof_file_suffix == BBVAFolderSuffixes.REGULAR
-        or proof_file_suffix == LaCaixaFolderSuffixes.REGULAR
-    ):
+    if proof_file_suffix == ProofFolderType.REGULAR:
         if is_monthly_proof(proof_page):
             return ProofType.MONTHLY
         elif is_settlement_proof(proof_page):

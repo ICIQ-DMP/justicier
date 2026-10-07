@@ -47,15 +47,15 @@ from .data import (
 from .defines import (
     SHAREPOINT_RLCS_OUTPUT_FOLDER_NAME,
     SHAREPOINT_SALARIES_OUTPUT_FOLDER_NAME,
-    ProofFileSuffix,
     RLCTypeFileName,
     SHAREPOINT_CONTRACTS_OUTPUT_FOLDER_NAME,
     SHAREPOINT_RNTS_OUTPUT_FOLDER_NAME,
     RLCSubType,
     RLCType,
     BankType,
-    ProofType,
     SalaryType,
+    SalaryFileSuffix,
+    ProofFolderType,
 )
 
 from .filesystem import flatten_dirs, list_dir
@@ -68,6 +68,7 @@ from .pdf import (
     merge_pdfs,
     parse_salary_type,
     get_matching_pages,
+    parse_proof_type,
 )
 from .logger import get_logger
 
@@ -317,7 +318,7 @@ def process_salaries_with_rlc(
             )
 
             # Liquidation files
-            if salary_file_suffix == ProofFileSuffix.LIQUIDATION:
+            if salary_file_suffix == SalaryFileSuffix.LIQUIDATION:
                 salary_file_liq_naf = salary_file_path.stem.split("_")[2]
                 if salary_file_liq_naf != str(naf):
                     log.trace(
@@ -444,7 +445,7 @@ def process_proof(
     nifs: list[NIF],
     proof_date: datetime,
     bank: BankType,
-    proof_type: ProofType,
+    proof_folder_type: ProofFolderType,
 ) -> None:
     """Processes a specific proof directory, that contain proof documents."""
     files = list_dir(proof_folder)
@@ -464,6 +465,7 @@ def process_proof(
                     f"{proof_folder / bankproof_file}. Error: {e}"
                 )
                 continue
+            proof_type = parse_proof_type(page, proof_folder_type)
 
             output_partial_path = proofs_output_path / unparse_year_month(proof_date)
             output_path = compute_path(output_partial_path, proof_type.value, ".pdf")
@@ -505,14 +507,16 @@ def process_proofs(
     for bankproof_folder in all_bankproof_folders:
         process_current = False
         try:
-            dir_date, bank, proof_type = parse_proof_folder_name(bankproof_folder.name)
+            dir_date, bank, proof_folder_type = parse_proof_folder_name(
+                bankproof_folder.name
+            )
         except InvalidFilenameError as e:
             log.error(
                 f"Proof folder {bankproof_folder} has an invalid name, skipping: {e}"
             )
             continue
 
-        if proof_type is ProofType.ADVANCED_SETTLEMENT:
+        if proof_folder_type is ProofFolderType.ADVANCED_SETTLEMENT:
             # Only select a payment that is settlement if the flag is active
             if look_for_liquidation_payments:
                 # When selecting, select the range plus two months offset, one from the beginning one from the end
@@ -539,7 +543,7 @@ def process_proofs(
                 naf_to_dni[naf],
                 dir_date,
                 bank,
-                proof_type,
+                proof_folder_type,
             )
 
 

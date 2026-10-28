@@ -104,6 +104,19 @@ class InputLocation(str, Enum):
     LOCAL = "local"
 
 
+class Mode(str, Enum):
+    """Execution mode, controlling which side effects on external systems are allowed.
+
+    DEV (default): skip both the SharePoint list update and the notification email.
+    TEST: update the SharePoint list, but skip the notification email.
+    PROD: update the SharePoint list and send the notification email.
+    """
+
+    DEV = "dev"
+    TEST = "test"
+    PROD = "prod"
+
+
 class InputElementsNames(str, Enum):
     """Input folder names."""
 

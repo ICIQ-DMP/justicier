@@ -38,6 +38,7 @@ from .nif import NIF
 from .naf import NAF
 from .custom_except import (
     InvalidFilenameError,
+    UndefinedSalaryTypeError,
 )
 from .data import (
     get_rlc_monthly_result_structure,
@@ -339,6 +340,13 @@ def process_salaries_with_rlc(
                 log.error(
                     f"Salary file {salary_file} has an invalid name, skipping: {e}"
                 )
+                continue
+            except UndefinedSalaryTypeError as e:
+                log.error(
+                    f"Salary file {salary_file} at page {str(salary_page_number)} has an invalid \
+                    format and its type can not be recognized, skipping: {e}"
+                )
+                input()
                 continue
 
             salary_output_filename_base = compute_output_filename_base(

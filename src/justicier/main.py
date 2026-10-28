@@ -50,6 +50,7 @@ from .defines import (
     LOCAL_ADMIN_LOG_FOLDER_PATH,
     InputElementsNames,
     InputLocation,
+    Mode,
     SecretNames,
     SHAREPOINT_ROOT_INPUT_FOLDER_NAME,
     SHAREPOINT_DRIVE_NAME,
@@ -94,6 +95,22 @@ from .tasks import (
 log = get_logger(__name__)
 
 
+def _sharepoint_list_update_allowed(args: argparse.Namespace) -> bool:
+    """Return True if the current mode allows writing to the SharePoint list.
+
+    DEV skips every list write; TEST and PROD both allow it.
+    """
+    return bool(args.mode != Mode.DEV.value)
+
+
+def _mail_send_allowed(args: argparse.Namespace) -> bool:
+    """Return True if the current mode allows sending the notification email.
+
+    Only PROD sends the email; DEV and TEST both skip it.
+    """
+    return bool(args.mode == Mode.PROD.value)
+
+
 def process(args: argparse.Namespace, input_folder: Path) -> tuple[str, str]:
     """Run the full justification pipeline for one employee request.
 
@@ -107,7 +124,7 @@ def process(args: argparse.Namespace, input_folder: Path) -> tuple[str, str]:
     Returns:
         Tuple of ``(result_sharepoint_url, log_sharepoint_url)``.
     """
-    if args.request:
+    if args.request and _sharepoint_list_update_allowed(args):
         update_list_item_field(
             args.request,
             {
@@ -153,7 +170,7 @@ def process(args: argparse.Namespace, input_folder: Path) -> tuple[str, str]:
 
     nifs = naf_to_dni[args.naf]
 
-    if args.request:
+    if args.request and _sharepoint_list_update_allowed(args):
         try:
             update_list_with_person_ids(args.request, args.naf, nifs[0], args.email)
         except PersonDoesNotExistInSharepointError as e:
@@ -371,21 +388,22 @@ def process(args: argparse.Namespace, input_folder: Path) -> tuple[str, str]:
         start_time = time.time()
         elapsed_time(start_time)
 
-        log.debug("Updating list element state to Completed")
-        update_list_item_field(
-            args.request,
-            {
-                SharepointListFields.WORKFLOW_STATE.value: SharepointListFieldWorkflowState.COMPLETED.value
-            },
-        )
-        log.debug("Updating list element error message to no error message")
-        update_list_item_field(
-            args.request, {SharepointListFields.ERROR_MESSAGE.value: "-"}
-        )
-        log.debug("Updating list element link to result")
-        update_list_item_field(
-            args.request, {SharepointListFields.RESULT.value: str(link)}
-        )
+        if _sharepoint_list_update_allowed(args):
+            log.debug("Updating list element state to Completed")
+            update_list_item_field(
+                args.request,
+                {
+                    SharepointListFields.WORKFLOW_STATE.value: SharepointListFieldWorkflowState.COMPLETED.value
+                },
+            )
+            log.debug("Updating list element error message to no error message")
+            update_list_item_field(
+                args.request, {SharepointListFields.ERROR_MESSAGE.value: "-"}
+            )
+            log.debug("Updating list element link to result")
+            update_list_item_field(
+                args.request, {SharepointListFields.RESULT.value: str(link)}
+            )
 
     return link, log_link
 
@@ -407,16 +425,17 @@ def main() -> None:
         err = f"A not controlled error happen during execution of Justicier. Error is: {str(e)}"
         log.error(err)
         if args.request:
-            update_list_item_field(
-                args.request, {SharepointListFields.ERROR_MESSAGE.value: err}
-            )
+            if _sharepoint_list_update_allowed(args):
+                update_list_item_field(
+                    args.request, {SharepointListFields.ERROR_MESSAGE.value: err}
+                )
 
-            update_list_item_field(
-                args.request,
-                {
-                    SharepointListFields.WORKFLOW_STATE.value: SharepointListFieldWorkflowState.ERROR.value
-                },
-            )
+                update_list_item_field(
+                    args.request,
+                    {
+                        SharepointListFields.WORKFLOW_STATE.value: SharepointListFieldWorkflowState.ERROR.value
+                    },
+                )
 
             if (
                 LOCAL_ADMIN_LOG_FOLDER_PATH.is_dir()
@@ -441,14 +460,15 @@ def main() -> None:
         exit(1)
 
     log.info("Justification process is finished.")
-    log.info("Sending notification email")
 
-    try:
-        owner_email = read_secret(SecretNames.SMTP_OWNER_EMAIL.value)
-    except SecretCouldNotBeReadFromAnySourceError:
-        owner_email = "justicier@org.org"
+    if args.request and _mail_send_allowed(args):
+        log.info("Sending notification email")
 
-    if args.request:
+        try:
+            owner_email = read_secret(SecretNames.SMTP_OWNER_EMAIL.value)
+        except SecretCouldNotBeReadFromAnySourceError:
+            owner_email = "justicier@org.org"
+
         mail_process(
             result_link=result_link,
             log_link=log_link,
@@ -459,6 +479,11 @@ def main() -> None:
             begin=args.begin,
             end=args.end,
             owner_email=owner_email,
+        )
+    else:
+        log.info(
+            f"Skipping notification email because mode is {args.mode!r} "
+            f"(or no request was given)."
         )
 
 

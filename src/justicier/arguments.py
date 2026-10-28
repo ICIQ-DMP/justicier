@@ -30,6 +30,7 @@ from .naf import NAF, is_naf_present, build_naf_to_dni, parse_naf
 from .custom_except import (
     ArgumentDateError,
     UndefinedInputTypeError,
+    UndefinedModeError,
     ArgumentNafInvalidError,
     ArgumentNafNotPresentError,
     ArgumentAuthorError,
@@ -39,6 +40,7 @@ from .defines import (
     SharepointListFields,
     from_string,
     InputLocation,
+    Mode,
     SecretNames,
     SHAREPOINT_LIST_NAME,
     DATETIME_SHAREPOINT_FORMAT,
@@ -275,6 +277,30 @@ def parse_input_location(value: str) -> Path:
     return path
 
 
+def parse_mode(value: str) -> str:
+    """Validate and return the execution mode string.
+
+    Args:
+        value: Mode string; must be one of ``"dev"``, ``"test"`` or ``"prod"``.
+
+    Returns:
+        The validated mode string.
+
+    Raises:
+        UndefinedModeError: If *value* is not a recognised mode.
+    """
+    if value == Mode.DEV.value:
+        return value
+    elif value == Mode.TEST.value:
+        return value
+    elif value == Mode.PROD.value:
+        return value
+    else:
+        raise UndefinedModeError(
+            'The value supplied for mode "' + value + '" is not defined.'
+        )
+
+
 def parse_arguments() -> argparse.Namespace:
     """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser(description="Justicier")
@@ -379,6 +405,17 @@ def parse_arguments() -> argparse.Namespace:
         required=False,
         default=False,
         help="Merge all RLCs and RNTs of each month.",
+    )
+
+    parser.add_argument(
+        "--mode",
+        type=parse_mode,
+        required=False,
+        default=Mode.DEV.value,
+        help="Execution mode, controlling side effects on external systems. "
+        '"dev" (default) skips both the SharePoint list update and the notification '
+        'email. "test" updates the SharePoint list but skips the email. "prod" does '
+        "both.",
     )
 
     args = parser.parse_args()

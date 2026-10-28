@@ -46,6 +46,10 @@ class UndefinedInputTypeError(Exception):
     """Raised when an unsupported input location type is supplied."""
 
 
+class UndefinedModeError(Exception):
+    """Raised when an unsupported execution mode is supplied."""
+
+
 class BadSharepointListUpdateRequestError(Exception):
     """Raised when a SharePoint list item update returns a non-200 status."""
 

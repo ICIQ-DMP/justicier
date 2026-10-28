@@ -222,8 +222,6 @@ def is_monthly_salary(salary_page: pypdf.PageObject) -> bool:
     if not text:
         return False
 
-    print(text)
-
     pattern_str = r".*Mensual -.*"
     pattern = re.compile(pattern_str)
 

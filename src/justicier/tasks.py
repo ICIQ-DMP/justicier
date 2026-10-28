@@ -346,7 +346,6 @@ def process_salaries_with_rlc(
                     f"Salary file {salary_file} at page {str(salary_page_number)} has an invalid \
                     format and its type can not be recognized, skipping: {e}"
                 )
-                input()
                 continue
 
             salary_output_filename_base = compute_output_filename_base(
